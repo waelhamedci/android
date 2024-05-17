@@ -1,0 +1,57 @@
+---
+language: android
+os:
+- linux
+dist: trusty
+jdk:
+- oraclejdk8
+sudo: true
+before_install:
+- yes | sdkmanager "platforms;android-29"
+android:
+  components:
+  - platform-tools
+  - tools
+  - build-tools-29.0.3
+  - android-29
+  licenses:
+  - android-sdk-preview-license-.+
+  - android-sdk-license-.+
+  - google-gdk-license-.+
+script:
+- wget https://github.com/sormuras/bach/raw/releases/11/install-jdk.sh
+- chmod +x $TRAVIS_BUILD_DIR/install-jdk.sh
+- export JAVA_HOME=$HOME/oraclejdk11
+- "$TRAVIS_BUILD_DIR/install-jdk.sh -F 11 --os linux-x64 --url https://download.java.net/java/GA/jdk11/9/GPL/openjdk-11.0.2_linux-x64_bin.tar.gz
+  --target $JAVA_HOME"
+- export PRODUCTION_PACKAGE=`if [ "$TRAVIS_TAG" == "" ]; then echo assembleProdNGXNgxDebug;
+  else echo createProductionPackageProdNGXNgxRelease; fi`
+- echo TRAVIS_TAG=$TRAVIS_TAG PRODUCTION_PACKAGE=$PRODUCTION_PACKAGE
+- "./gradlew clean checkstyle testNgxDebugUnitTest $PRODUCTION_PACKAGE"
+before_cache:
+- rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+- rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+cache:
+  directories:
+  - "$HOME/.m2/"
+  - "$HOME/.gradle/caches/"
+  - "$HOME/.gradle/wrapper/"
+before_deploy:
+- export RELEASE_PKG_FILE=$(ls app/build/distributions/production_ProdNGXNgxRelease_*.zip)
+- echo "deploying $RELEASE_PKG_FILE"
+deploy:
+- provider: releases
+  file_glob: true
+  file:
+  - "${RELEASE_PKG_FILE}"
+  skip_cleanup: true
+  'on':
+    repo: SciAps/XRFAndroid
+    all_branches: true
+    tags: true
+    jdk: oraclejdk8
+  token:
+    secure: aEQ3Gj/xMOsf0OKCn1IryhSxsvKa97f8c7kc8V5sSEN2HJoovjv/TrXRjb/S/X4/PxoWk5fiSOk3AstOp+bFVrJptI2XvKyBe1ey7B/yJ5OLOIvXZrI8WcIDRtQ8V6c+g2HKHvxVO9YXecTQdbktvbnCm9qiNoiVT5Wz2ZNfJT/QufLYtN844qxiMsSGDTwtMwBfs5Ay+ZKWWk4VoS/nY+JgWwtMEiSWY+G4KCUrPpKHXS8Xlnq7s3DUMx7gfGp5KpPCUWAauQk10l4zJ3a+74DPFQ4vCmWn/occXFQChdrmjc661Lu8EvLZlTE2Fn5GJbLm3agoUROI6c6GNneEvMM+l2H4bVBWue/9yXF9I8Mz3qSZuxpo1h6y/xfyRGx3FWjNyy5xe/HewlQl04urqzdYGiHnnwOuV8MsSdPEiDpN4lUOlIeagI/9rXMDmbxTpbZPX/cXrIStI8dlQu/z+JyFIY/TuHbYvLl/B+9PcUIRrL49yK4Kij4eSxtYXM+mb+zd1kry+72wjQ2qAogONmY+VIlugCmhPxHklYfncNQUqtLFSL+/lyh8Sao2D2VLItW+jXeJrsaFnp1OrUsNHRhqYZgXjAFnO1SGBp+D20/QpfyiqI3GAXXBi9JDLP/qonJCiSSL+CNOg3VlYWI4PsP7G9BI0rTWGZ9e2w5rPxY=
+addons:
+  artifacts:
+    enabled: true
